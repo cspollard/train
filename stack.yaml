@@ -1,0 +1,10 @@
+resolver: lts-14.7
+
+extra-deps:
+- extensible-0.6.1
+- membership-0
+- free-algebras-0.0.7.2
+- natural-numbers-0.1.2.0
+
+packages:
+- .

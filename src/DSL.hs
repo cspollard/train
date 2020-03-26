@@ -1,0 +1,198 @@
+{-# LANGUAGE Arrows #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+
+module DSL where
+
+-- import Prelude hiding ((.), id)
+-- import Data.Profunctor ((:->))
+-- import Data.Functor.Compose
+-- import Control.Category
+-- import Control.Arrow
+-- import Data.Coerce
+-- import Data.Extensible.Sum
+-- import Data.Extensible.Class
+-- import Data.Extensible.Inclusion
+-- import Data.Semigroupoid
+-- import Data.Functor.Identity
+-- 
+-- 
+-- newtype F2 a b p = F2 { runF2 :: p a b }
+-- 
+-- newtype U2 ps a b = U2 { runU2 :: ps :/ F2 a b }
+-- 
+-- infixr 1 <:/
+-- (<:/) :: (p a b -> r) -> (U2 ps a b -> r) -> (U2 (p : ps) a b) -> r
+-- f <:/ g = \(U2 x) -> ((runF2 >>> f) <:| (U2 >>> g)) x
+-- 
+-- exhaust' :: U2 '[] a b -> x
+-- exhaust' (U2 x) = exhaust x
+-- 
+-- embed' :: Member ps p => p a b -> U2 ps a b
+-- embed' = F2 >>> embed >>> U2
+-- 
+-- 
+-- data Ana p a b where
+--   Lift :: p a b -> Ana p a b
+--   Comp :: Ana p a x -> Ana p x b -> Ana p a b
+--   Par :: Ana p a b -> Ana p c d -> Ana p (a, c) (b, d)
+-- 
+-- 
+-- runAna
+--   :: (forall x y z. p x y -> p y z -> p x z)
+--   -> (forall w x y z. p w x -> p y z -> p (w, y) (x, z))
+--   -> Ana p :-> p
+-- runAna comp par ana =
+--   case ana of
+--     Lift p -> p
+--     Comp pax pxb -> runAna comp par pax `comp` runAna comp par pxb
+--     Par pab pcd -> runAna comp par pab `par` runAna comp par pcd
+-- 
+-- 
+-- hoistAna :: p :-> q -> Ana p :-> Ana q
+-- hoistAna nat ana =
+--   case ana of
+--     Lift p -> Lift $ nat p
+--     Comp pax pxb -> Comp (hoistAna nat pax) (hoistAna nat pxb)
+--     Par pab pcd -> Par (hoistAna nat pab) (hoistAna nat pcd)
+-- 
+-- 
+-- instance Member ps I => Category (Ana (U2 ps)) where
+--   id = id'
+--   (.) = flip Comp
+-- 
+-- instance (Member ps I, Member ps Dup) => Arrow (Ana (U2 ps)) where
+--   arr = error "arr not defined for Ana"
+--   (***) = Par
+--   f &&& g = dup >>> (f *** g)
+-- 
+-- 
+-- -- type Prod = (,)
+-- -- type Sum = Either
+-- -- type Exp = (->)
+-- -- type Zero = Void
+-- -- type One = ()
+-- 
+-- 
+-- data I a b where
+--   I :: I a a
+-- 
+-- id' :: Member ps I => Ana (U2 ps) a a
+-- id' = Lift $ embed' I
+-- 
+-- runI :: I :-> (->)
+-- runI I = id
+-- 
+-- 
+-- data Add a b where
+--   Add :: Num a => Add (a, a) a
+-- 
+-- add :: (Num a, Member ps Add) => Ana (U2 ps) (a, a) a
+-- add = Lift $ embed' Add
+-- 
+-- data Swap a b where
+--   Swap :: Swap (a, b) (b, a)
+-- 
+-- swap :: Member ps Swap => Ana (U2 ps) (a, b) (b, a)
+-- swap = Lift $ embed' Swap
+-- 
+-- runSwap :: Swap :-> (->)
+-- runSwap Swap (a, b) = (b, a)
+-- 
+-- 
+-- data Mix a b where
+--   Mix :: Mix (a, (b, c)) ((a, b), c)
+-- 
+-- mix :: Member ps Mix => Ana (U2 ps) (a, (b, c)) ((a, b), c)
+-- mix = Lift $ embed' Mix
+-- 
+-- runMix :: Mix :-> (->)
+-- runMix Mix (a, (b, c)) = ((a, b), c)
+-- 
+-- 
+-- -- maybe this can be built from Mix and Swap
+-- data Cross a b where
+--   Cross :: Cross ((a, b), (c, d)) ((a, c), (b, d))
+-- 
+-- cross :: Member ps Cross => Ana (U2 ps) ((a, b), (c, d)) ((a, c), (b, d))
+-- cross = Lift $ embed' Cross
+-- 
+-- runCross :: Cross :-> (->)
+-- runCross Cross ((a, b), (c, d)) = ((a, c), (b, d))
+-- 
+-- 
+-- data Mul a b where
+--   Mul :: Num a => Mul (a, a) a
+-- 
+-- mul :: (Num a, Member ps Mul) => Ana (U2 ps) (a, a) a
+-- mul = Lift $ embed' Mul
+-- 
+-- runMul :: Mul :-> (->)
+-- runMul Mul = uncurry (*)
+-- 
+-- 
+-- data Neg a b where
+--   Neg :: Num a => Neg a a
+-- 
+-- neg :: (Num a, Member ps Neg) => Ana (U2 ps) a a
+-- neg = Lift $ embed' Neg
+-- 
+-- runNeg :: Neg :-> (->)
+-- runNeg Neg x = negate x
+-- 
+-- 
+-- sqr :: (Num a, Include ps '[Mul, Dup]) => Ana (U2 ps) a a
+-- sqr = Comp dup mul
+-- 
+-- sub :: (Num a, Include ps '[Neg, Add, I]) => Ana (U2 ps) (a, a) a
+-- sub = Par id' neg >>> add
+-- 
+-- squaredDiff :: (Num a, Include ps '[Dup, Neg, Add, Mul, I]) => Ana (U2 ps) (a, a) a
+-- squaredDiff = sub >>> sqr
+-- 
+-- 
+-- data Param a b where
+--   Param :: a -> Param () a
+-- 
+-- param :: Member ps Param => a -> Ana (U2 ps) () a
+-- param = Lift <<< embed' <<< Param
+-- 
+-- 
+-- data Dup a b where
+--   Dup :: Dup a (a, a)
+-- 
+-- dup :: Member ps Dup => Ana (U2 ps) a (a, a)
+-- dup = Lift $ embed' Dup
+-- 
+-- runDup :: Dup :-> (->)
+-- runDup Dup x = (x, x)
+-- 
+-- 
+-- -- TODO!
+-- data Join p a b where
+--   Join :: p ((), a) b -> Join p a b
+-- 
+-- 
+-- dLossAdd
+--   :: (Num a, Include ps '[Add, Dup, I])
+--   => Add (a, a) a -> Ana (U2 ps) a a -> Ana (U2 ps) (a, a) (a, a)
+-- dLossAdd Add derivs = add >>> derivs >>> dup
+-- 
+-- 
+-- dLossMul
+--   :: (Num a, Include ps '[Mul, Add, Dup, Swap, I, Cross])
+--   => Mul (a, a) a -> Ana (U2 ps) a a -> Ana (U2 ps) (a, a) (a, a)
+-- dLossMul Mul derivs = dup >>> Par (mul >>> derivs >>> dup) swap >>> cross >>> Par mul mul
+-- 
+-- 
+-- 
+-- -- dLossParam :: Ana (U2 ps) (a, b) a -> Param () a -> Ana (U2 ps) a b -> Ana (U2 ps) () a
+-- -- dLossParam comb p derivs = p >>> dup >>> Par id derivs >>> comb
+-- 
+-- -- how do I take an input and route it into the argument of dLossMull (fff)?
+-- -- asdf = dLossMul Mul (sub 
+-- 
+-- -- deriveC :: Ana (U2 ps) a b -> Ana (U2 ps) b a -> Ana (U2 ps) a a
+-- -- deriveC 
+-- 
+-- 
